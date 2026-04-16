@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Clips{% endblock %}
+{% block content %}
+<h1 class="mb-4">Clips</h1>
+<table class="table table-striped table-hover">
+  <thead><tr>
+    <th>ID</th><th>Title</th><th>Owner</th><th>Key</th><th>Mode</th><th>Tempo</th>
+  </tr></thead>
+  <tbody>
+    {% for c in clips %}
+      <tr>
+        <td><a href="/clips/{{ c.clipID }}">{{ c.clipID }}</a></td>
+        <td>{{ c.title }}</td>
+        <td>{{ c.owner }}</td>
+        <td>{{ c.musicalKey }}</td>
+        <td>{{ c.mode }}</td>
+        <td>{{ c.tempo }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

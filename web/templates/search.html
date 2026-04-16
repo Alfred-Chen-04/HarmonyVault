@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock %}
+{% block content %}
+<h1>Search clips</h1>
+<form method="get" class="row g-3 mb-4">
+  <div class="col-sm-2">
+    <label class="form-label">Key</label>
+    <input name="key" class="form-control" value="{{ key or '' }}" placeholder="C, C#, Db">
+  </div>
+  <div class="col-sm-2">
+    <label class="form-label">Mode</label>
+    <select name="mode" class="form-select">
+      <option value="">Any</option>
+      <option value="major" {% if mode == 'major' %}selected{% endif %}>major</option>
+      <option value="minor" {% if mode == 'minor' %}selected{% endif %}>minor</option>
+    </select>
+  </div>
+  <div class="col-sm-2">
+    <label class="form-label">Tempo min</label>
+    <input name="tempo_min" type="number" step="1" class="form-control" value="{{ tempo_min }}">
+  </div>
+  <div class="col-sm-2">
+    <label class="form-label">Tempo max</label>
+    <input name="tempo_max" type="number" step="1" class="form-control" value="{{ tempo_max }}">
+  </div>
+  <div class="col-sm-2 align-self-end">
+    <button class="btn btn-primary">Search</button>
+  </div>
+</form>
+
+{% if rows %}
+<p class="text-muted">{{ rows|length }} result(s)</p>
+<table class="table table-striped">
+  <thead><tr><th>ID</th><th>Title</th><th>Owner</th><th>Key</th><th>Mode</th><th>Tempo</th></tr></thead>
+  <tbody>
+    {% for c in rows %}
+    <tr>
+      <td><a href="/clips/{{ c.clipID }}">{{ c.clipID }}</a></td>
+      <td>{{ c.title }}</td>
+      <td>{{ c.owner }}</td>
+      <td>{{ c.musicalKey }}</td>
+      <td>{{ c.mode }}</td>
+      <td>{{ c.tempo }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

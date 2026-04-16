@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Project {{ project.name }}{% endblock %}
+{% block content %}
+<h1>{{ project.name }}</h1>
+<p class="text-muted">Owner: <strong>{{ project.owner }}</strong></p>
+<p>{{ project.description or "" }}</p>
+
+<h2 class="mt-4">Collaborators</h2>
+<table class="table table-sm w-auto">
+  <thead><tr><th>User</th><th>Role</th><th>Added</th></tr></thead>
+  <tbody>
+    {% for c in collaborators %}
+    <tr>
+      <td>{{ c.username }}</td>
+      <td><span class="badge bg-secondary">{{ c.role }}</span></td>
+      <td>{{ c.addedAt }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2 class="mt-4">Clips in this project</h2>
+<table class="table table-striped">
+  <thead><tr><th>ID</th><th>Title</th><th>Owner</th><th>Key</th><th>Mode</th><th>Tempo</th></tr></thead>
+  <tbody>
+    {% for c in clips %}
+    <tr>
+      <td><a href="/clips/{{ c.clipID }}">{{ c.clipID }}</a></td>
+      <td>{{ c.title }}</td>
+      <td>{{ c.owner }}</td>
+      <td>{{ c.musicalKey }}</td>
+      <td>{{ c.mode }}</td>
+      <td>{{ c.tempo }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
