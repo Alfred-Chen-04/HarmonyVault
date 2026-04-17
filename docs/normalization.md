@@ -63,12 +63,33 @@ Dependency preservation is trivially satisfied since every FD in `F_total` is en
 
 ---
 
-## Why the proposal's original schema was not yet in 3NF
+## Why the proposal's original relationship schemas were incorrect
 
-The proposal (before TA feedback) included three relationship relations that violated the 3NF definition of relationship-schema primary keys:
+The TA's proposal feedback (item 5) flagged three relationship schemas that were written with the wrong primary key. The error is structural: the PK of a relationship schema must be determined by the *cardinality* of the relationship, not by naively listing both entity keys. This section first shows the **corrected relationship schemas** in the form the TA asked for, then shows how each one collapses into the final nine-relation design.
 
-1. `Has(clipID, userID)` with composite PK. Because `clipID -> userID` holds (a clip has exactly one owner), `{userID}` is not a candidate key of Has but appears as a non-prime determinant of itself — trivial — while the composite PK was larger than necessary. Folding `userID` into `Clips` removes the relation entirely and satisfies BCNF.
-2. `Create(userID, projectID)` had the same structural problem and was folded into `Projects.ownerUserID` for the same reason.
-3. `To(clipID, attributeID)` held `clipID -> attributeID` and `attributeID -> clipID` because the relationship is 1-1, making each of `{clipID}` and `{attributeID}` a candidate key. Keeping both as the PK inflated the key unnecessarily. Collapsing `MusicalAttributes` to use `clipID` as both PK and FK yields BCNF with a single candidate key.
+### Step 1 — corrected relationship schemas (ER level)
 
-These three corrections — together with adding `ProjectCollaborators` and `ClipVersions` — are exactly the changes that produce the nine-relation schema above.
+| # | Original relationship | Cardinality | Incorrect proposal form | Corrected form (TA rule) |
+| --- | --- | --- | --- | --- |
+| 1 | `Has` (Users — Clips) | many-to-one (clips → user) | `Has(userID, clipID)` with PK `{userID, clipID}` | `Has(`**`clipID`**`, userID)` with PK `{clipID}` — the PK comes from the "many" side |
+| 2 | `Create` (Users — Projects) | many-to-one (projects → user) | `Create(userID, projectID)` with PK `{userID, projectID}` | `Create(`**`projectID`**`, userID)` with PK `{projectID}` — PK from the "many" side |
+| 3 | `To` (Clips — MusicalAttributes) | one-to-one | `To(clipID, attributeID)` with PK `{clipID, attributeID}` | `To(`**`clipID`**`, attributeID)` with PK `{clipID}` — for a 1-1, one side's key is chosen as PK |
+
+In each case the original proposal used a *composite* primary key containing both entity keys. That is wrong for a many-to-one relationship (the PK is the "many" side alone) and redundant for a one-to-one relationship (either side's key is a candidate; only one is promoted to PK).
+
+### Step 2 — collapse each corrected relationship into an entity table
+
+Once the relationship schemas above are correct, each of them has exactly the same candidate key as one of the entities it connects, which means the relationship can be merged into that entity without information loss:
+
+1. `Has(clipID, userID)` with `{clipID}` as PK has the same PK as `Clips`. Adding `userID` as a non-key attribute of `Clips` (renamed `Clips.userID`) preserves every FD and removes the relation entirely.
+2. `Create(projectID, userID)` with `{projectID}` as PK has the same PK as `Projects`. Folding `userID` (renamed `Projects.ownerUserID`) into `Projects` preserves every FD and removes the relation.
+3. `To(clipID, attributeID)` with `{clipID}` as PK: since the attribute side is entirely functionally dependent on `clipID`, its attributes (`musicalKey`, `mode`, `tempo`, `timeSignature`) become non-key attributes of a relation keyed on `clipID`. This is `MusicalAttributes(clipID, …)` with `clipID` as both PK and FK to `Clips`.
+
+### Step 3 — add the two relations the proposal was missing
+
+The TA also asked for a collaboration use case (item 3) and for the version-history feature mentioned in the proposal to have a backing relation. Two new relations were added:
+
+- `ProjectCollaborators(projectID, userID, role, addedAt)` with PK `{projectID, userID}` — a standard M-N relation with a role attribute.
+- `ClipVersions(versionID, clipID, versionNumber, notes, filepath, dateCreated)` — a weak entity of `Clips` with its own surrogate PK and a second candidate key `(clipID, versionNumber)`.
+
+The three corrections plus the two additions together produce the nine-relation BCNF schema proved above.

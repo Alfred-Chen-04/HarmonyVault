@@ -6,17 +6,21 @@ This file orients any AI coding agent (Claude Code, Cursor, etc.) working on the
 
 HarmonyVault is the CSDS 341 (Spring 2026) final project for a team of three: Jacob Liebson (jel212), Sky Zhou (sxz903), and Alfred Chen (qxc225). It is a relational database backend for a music-idea management system. Musicians accumulate short audio recordings (melodies, chord progressions, rhythmic ideas) that are hard to organize in a file system. HarmonyVault stores the metadata (key, tempo, mode, time signature, tags, projects, versions, collaborators) of those clips and lets users query them; audio capture and attribute detection are assumed to be done by external tools.
 
-The deliverables are a working MySQL database, a Python command-line interface, an optional local Flask web UI, a written report, and an in-class presentation. The final submission is due on Canvas on 2026-05-01.
+The deliverable is split across two repositories after the 2026-04-17 pivot:
+
+- **This repo** owns the MySQL schema, the data-generation scripts (which now emit one CSV per table), the canonical SQL queries, the ER / FD / normalization documents, and the written report.
+- **Sky's separate Java repository** owns the command-line interface. The Java CLI reads the CSVs produced here and ingests them via `LOAD DATA LOCAL INFILE`.
+
+The submission is due on Canvas on 2026-05-01. The TA demo is on 2026-04-22 at 11:00 AM.
 
 ## 2. Tech stack
 
 - Database: MySQL 8.x
-- Language: Python 3.11+
-- CLI framework: click
-- Web framework: Flask + Jinja + Bootstrap (served locally)
-- DB driver: mysql-connector-python
+- Data-generation language: Python 3.11+
 - Data tools: pandas (Spotify CSV ingest), Faker (synthetic data)
-- Test framework: pytest
+- CSV output format: UTF-8, `\N` as the NULL marker, RFC 4180 quoting — see [docs/csv_format.md](docs/csv_format.md)
+- CLI language: Java (lives in Sky's separate repository; uses `mysql-connector-j` with `allowLoadLocalInfile=true`)
+- Test framework: pytest (schema + query smoke tests only)
 - OS targets: macOS and Linux
 
 ## 3. Setup
@@ -25,43 +29,38 @@ The deliverables are a working MySQL database, a Python command-line interface, 
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # then edit DB credentials
-python scripts/setup_db.py    # creates schema, loads Spotify data, generates synthetic rows
+cp .env.example .env          # optional; only needed for the pytest suite
+python scripts/setup_db.py    # emits the nine CSV files into data/csv/
 ```
 
-A MySQL 8 server must be reachable at the host/port defined in `.env`. A quick option is Docker:
-
-```bash
-docker run -d --name hv-mysql -e MYSQL_ROOT_PASSWORD=dev -p 3306:3306 mysql:8
-```
+The Java CLI (separate repo) loads those CSVs into its own MySQL instance.
 
 ## 4. Run
 
-- CLI entry point: `python -m cli --help`
-- Web server: `flask --app web.app run` (defaults to http://localhost:5000)
+- Regenerate the CSV dataset: `python scripts/setup_db.py`
 - Tests: `pytest`
-- Reset database: `python scripts/reset_db.py`
+- Sky's Java CLI: see Sky's repository README.
 
 ## 5. Directory map
 
 | Path | Owner | Purpose |
 | --- | --- | --- |
-| `AGENTS.md` | Alfred | This file |
-| `README.md` | Alfred | User-facing install + run instructions |
-| `schema/` | Alfred | DDL: `CREATE TABLE`, constraints, triggers, indexes |
-| `docs/` | Alfred | ER diagram, functional dependencies, normalization proof, integrity constraint catalog, work-division spec |
-| `scripts/` | Jacob | Data ingest (Spotify CSV) and synthetic data generation |
-| `cli/` | Sky | click-based command-line interface |
-| `queries/` | Sky | Canonical SQL for every example query, plus RA/TRC equivalents |
-| `web/` | Jacob + Sky | Local Flask UI (extra credit) |
-| `data/` | Jacob | Downloaded CSVs (gitignored) |
-| `tests/` | shared | pytest smoke tests for schema, queries, CLI |
-| `report/` | shared | Final report markdown plus screenshot assets |
-| `presentation/` | shared | Slides for the in-class presentation |
+| [AGENTS.md](AGENTS.md) | Alfred | This file |
+| [README.md](README.md) | Alfred | User-facing install + run instructions |
+| [schema/](schema/) | Alfred | DDL: `CREATE TABLE`, triggers, indexes |
+| [docs/](docs/) | Alfred | ER diagram, FDs, normalization proof, integrity constraints, CSV interchange spec, work-division spec |
+| [scripts/](scripts/) | Jacob | CSV generation (Spotify + Faker) |
+| [queries/](queries/) | Sky | Canonical SQL for every example query, plus RA/TRC equivalents |
+| [data/csv/](data/) | Jacob | Generated CSVs (gitignored) |
+| `data/csv_sample/` | Jacob | Tiny FK-consistent sample CSVs for Sky to develop against |
+| [tests/](tests/) | shared | pytest schema + query smoke tests |
+| [report/](report/) | shared | Final report markdown plus screenshot assets |
+| [presentation/](presentation/) | shared | Slides for the in-class presentation |
+| [legacy_python/](legacy_python/) | archived | Pre-pivot Python CLI and Flask web UI — do not modify |
 
 ## 6. Schema quick reference
 
-Nine relations. `PK` = primary key, `FK` = foreign key. See `schema/01_create_tables.sql` for the authoritative DDL and `docs/normalization.md` for the 3NF/BCNF proof.
+Nine relations. `PK` = primary key, `FK` = foreign key. See [schema/01_create_tables.sql](schema/01_create_tables.sql) for the authoritative DDL and [docs/normalization.md](docs/normalization.md) for the BCNF proof.
 
 ```
 Users(userID PK, username UNIQUE, email UNIQUE, dateCreated)
@@ -78,17 +77,19 @@ ClipVersions(versionID PK, clipID FK→Clips, versionNumber, notes, filepath, da
 
 ## 7. Conventions
 
-- SQL keywords in UPPERCASE; identifiers in `snake_case_or_camelCase` (match what is already in `schema/`).
-- Never commit `data/*.csv`, `.env`, or `.venv/`. `.gitignore` enforces this.
-- All user-facing SQL belongs in `queries/*.sql`. CLI commands and web routes read these files through `cli/db.py` helpers. No inline SQL in Python.
-- Any change that touches the schema must update three things in the same commit: `schema/01_create_tables.sql`, `docs/ER_diagram.drawio` (and re-export `.png`), and `docs/normalization.md`.
+- SQL keywords in UPPERCASE; identifiers in `camelCase` (match what is already in [schema/](schema/)).
+- Never commit `data/csv/*`, `.env`, or `.venv/`. `.gitignore` enforces this. `data/csv_sample/*` **is** committed so Sky has something to develop against.
+- CSV column order must match the `CREATE TABLE` column order exactly. Header row is the column list. The loader on Sky's side uses `IGNORE 1 LINES`.
+- All user-facing SQL belongs in [queries/](queries/) so that the Java CLI can load query text at runtime instead of embedding SQL strings.
+- Any schema change must update three artifacts in the same commit: [schema/01_create_tables.sql](schema/01_create_tables.sql), [docs/ER_diagram.drawio](docs/ER_diagram.drawio) (re-export the `.png`), and [docs/normalization.md](docs/normalization.md). It may also require an update to [docs/csv_format.md](docs/csv_format.md) if it changes column order, types, or CHECKs.
 - All report prose, code comments, identifiers, and UI copy must be in English. Internal team chat can be bilingual.
 - Commit messages reference the rubric section they serve when relevant (e.g. "report §5 — add BCNF proof for ClipVersions").
 
 ## 8. How Claude Code should help
 
-- When asked to add a query: place the SQL in the right file under `queries/`, wire a CLI subcommand or Flask route that calls it through `db.py`, and add a smoke test in `tests/test_queries_run.py`.
-- When asked to change the schema: update `schema/01_create_tables.sql`, regenerate the ER diagram in `docs/`, refresh the FD and normalization docs, and bump the relevant section in `report/final_report.md`.
-- When asked about the rubric: the spec is `Spring2026_Final_Project_Specification-Design-Implementation.pdf` in the parent directory; the TA's proposal feedback is in `Proposal Feedback.docx` in the same location. Both are authoritative.
-- When unsure which teammate owns an area: check `docs/work_division.md`. Do not reassign work without prompting Alfred.
-- Before the 2026-04-22 TA demo, every change must keep `pytest` green and `python -m cli --help` working end-to-end.
+- When asked to add a query: place the SQL in the right file under [queries/](queries/) and add a smoke test in [tests/test_queries_run.py](tests/test_queries_run.py). The Java CLI side is owned by Sky.
+- When asked to change the schema: update [schema/01_create_tables.sql](schema/01_create_tables.sql), regenerate the ER diagram in [docs/](docs/), refresh the FD and normalization docs, update [docs/csv_format.md](docs/csv_format.md) if column order / types change, and bump the relevant section in [report/final_report.md](report/final_report.md).
+- When asked about the rubric: the spec is `Spring2026_Final_Project_Specification-Design-Implementation.pdf` in the parent directory; the TA's proposal feedback is `Proposal Feedback.docx` in the same place. Both are authoritative.
+- When unsure which teammate owns an area: check [docs/work_division.md](docs/work_division.md). Do not reassign work without prompting Alfred.
+- Before the 2026-04-22 TA demo, every change must keep `pytest` green and must not break the CSV contract in [docs/csv_format.md](docs/csv_format.md) without a coordinated update on Sky's Java side.
+- Archived Python code lives in [legacy_python/](legacy_python/). Do not modify it unless explicitly asked to revive the web UI for extra credit.
