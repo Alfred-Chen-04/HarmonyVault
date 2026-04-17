@@ -9,7 +9,7 @@ HarmonyVault is the CSDS 341 (Spring 2026) final project for a team of three: Ja
 The deliverable is split across two repositories after the 2026-04-17 pivot:
 
 - **This repo** owns the MySQL schema, the data-generation scripts (which now emit one CSV per table), the canonical SQL queries, the ER / FD / normalization documents, and the written report.
-- **Sky's separate Java repository** owns the command-line interface. The Java CLI reads the CSVs produced here and ingests them via `LOAD DATA LOCAL INFILE`.
+- **Jacob's separate Java repository** owns the command-line interface. The Java CLI reads the CSVs produced here and ingests them via `LOAD DATA LOCAL INFILE`.
 
 The submission is due on Canvas on 2026-05-01. The TA demo is on 2026-04-22 at 11:00 AM.
 
@@ -19,7 +19,7 @@ The submission is due on Canvas on 2026-05-01. The TA demo is on 2026-04-22 at 1
 - Data-generation language: Python 3.11+
 - Data tools: pandas (Spotify CSV ingest), Faker (synthetic data)
 - CSV output format: UTF-8, `\N` as the NULL marker, RFC 4180 quoting — see [docs/csv_format.md](docs/csv_format.md)
-- CLI language: Java (lives in Sky's separate repository; uses `mysql-connector-j` with `allowLoadLocalInfile=true`)
+- CLI language: Java (lives in Jacob's separate repository; uses `mysql-connector-j` with `allowLoadLocalInfile=true`)
 - Test framework: pytest (schema + query smoke tests only)
 - OS targets: macOS and Linux
 
@@ -39,7 +39,7 @@ The Java CLI (separate repo) loads those CSVs into its own MySQL instance.
 
 - Regenerate the CSV dataset: `python scripts/setup_db.py`
 - Tests: `pytest`
-- Sky's Java CLI: see Sky's repository README.
+- Jacob's Java CLI: see Jacob's repository README.
 
 ## 5. Directory map
 
@@ -49,10 +49,10 @@ The Java CLI (separate repo) loads those CSVs into its own MySQL instance.
 | [README.md](README.md) | Alfred | User-facing install + run instructions |
 | [schema/](schema/) | Alfred | DDL: `CREATE TABLE`, triggers, indexes |
 | [docs/](docs/) | Alfred | ER diagram, FDs, normalization proof, integrity constraints, CSV interchange spec, work-division spec |
-| [scripts/](scripts/) | Jacob | CSV generation (Spotify + Faker) |
-| [queries/](queries/) | Sky | Canonical SQL for every example query, plus RA/TRC equivalents |
-| [data/csv/](data/) | Jacob | Generated CSVs (gitignored) |
-| `data/csv_sample/` | Jacob | Tiny FK-consistent sample CSVs for Sky to develop against |
+| [scripts/](scripts/) | Sky | CSV generation (Spotify + Faker) |
+| [queries/](queries/) | Jacob | Canonical SQL for every example query, plus RA/TRC equivalents |
+| [data/csv/](data/) | Sky | Generated CSVs (gitignored) |
+| `data/csv_sample/` | Sky | Tiny FK-consistent sample CSVs for Jacob to develop against |
 | [tests/](tests/) | shared | pytest schema + query smoke tests |
 | [report/](report/) | shared | Final report markdown plus screenshot assets |
 | [presentation/](presentation/) | shared | Slides for the in-class presentation |
@@ -78,8 +78,8 @@ ClipVersions(versionID PK, clipID FK→Clips, versionNumber, notes, filepath, da
 ## 7. Conventions
 
 - SQL keywords in UPPERCASE; identifiers in `camelCase` (match what is already in [schema/](schema/)).
-- Never commit `data/csv/*`, `.env`, or `.venv/`. `.gitignore` enforces this. `data/csv_sample/*` **is** committed so Sky has something to develop against.
-- CSV column order must match the `CREATE TABLE` column order exactly. Header row is the column list. The loader on Sky's side uses `IGNORE 1 LINES`.
+- Never commit `data/csv/*`, `.env`, or `.venv/`. `.gitignore` enforces this. `data/csv_sample/*` **is** committed so Jacob has something to develop against.
+- CSV column order must match the `CREATE TABLE` column order exactly. Header row is the column list. The loader on Jacob's side uses `IGNORE 1 LINES`.
 - All user-facing SQL belongs in [queries/](queries/) so that the Java CLI can load query text at runtime instead of embedding SQL strings.
 - Any schema change must update three artifacts in the same commit: [schema/01_create_tables.sql](schema/01_create_tables.sql), [docs/ER_diagram.drawio](docs/ER_diagram.drawio) (re-export the `.png`), and [docs/normalization.md](docs/normalization.md). It may also require an update to [docs/csv_format.md](docs/csv_format.md) if it changes column order, types, or CHECKs.
 - All report prose, code comments, identifiers, and UI copy must be in English. Internal team chat can be bilingual.
@@ -87,9 +87,9 @@ ClipVersions(versionID PK, clipID FK→Clips, versionNumber, notes, filepath, da
 
 ## 8. How Claude Code should help
 
-- When asked to add a query: place the SQL in the right file under [queries/](queries/) and add a smoke test in [tests/test_queries_run.py](tests/test_queries_run.py). The Java CLI side is owned by Sky.
+- When asked to add a query: place the SQL in the right file under [queries/](queries/) and add a smoke test in [tests/test_queries_run.py](tests/test_queries_run.py). The Java CLI side is owned by Jacob.
 - When asked to change the schema: update [schema/01_create_tables.sql](schema/01_create_tables.sql), regenerate the ER diagram in [docs/](docs/), refresh the FD and normalization docs, update [docs/csv_format.md](docs/csv_format.md) if column order / types change, and bump the relevant section in [report/final_report.md](report/final_report.md).
 - When asked about the rubric: the spec is `Spring2026_Final_Project_Specification-Design-Implementation.pdf` in the parent directory; the TA's proposal feedback is `Proposal Feedback.docx` in the same place. Both are authoritative.
 - When unsure which teammate owns an area: check [docs/work_division.md](docs/work_division.md). Do not reassign work without prompting Alfred.
-- Before the 2026-04-22 TA demo, every change must keep `pytest` green and must not break the CSV contract in [docs/csv_format.md](docs/csv_format.md) without a coordinated update on Sky's Java side.
+- Before the 2026-04-22 TA demo, every change must keep `pytest` green and must not break the CSV contract in [docs/csv_format.md](docs/csv_format.md) without a coordinated update on Jacob's Java side.
 - Archived Python code lives in [legacy_python/](legacy_python/). Do not modify it unless explicitly asked to revive the web UI for extra credit.

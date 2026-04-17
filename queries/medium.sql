@@ -1,5 +1,5 @@
 -- Medium queries (report §6): joins, aggregation, subqueries.
--- Owner: Sky Zhou (sxz903).
+-- Owner: Jacob Liebson (jel212).
 
 -- M1: clips in C minor with tempo between 90 and 120 BPM owned by a named user
 SELECT c.clipID, c.title, ma.tempo

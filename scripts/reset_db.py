@@ -1,6 +1,6 @@
 """Drop and rebuild the HarmonyVault database.
 
-Owner: Jacob Liebson (jel212).
+Owner: Sky Zhou (sxz903).
 """
 
 from __future__ import annotations

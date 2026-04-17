@@ -1,6 +1,6 @@
 """Generate synthetic users, tags, projects, collaborators, and versions.
 
-Owner: Jacob Liebson (jel212). Uses Faker so the data looks realistic in
+Owner: Sky Zhou (sxz903). Uses Faker so the data looks realistic in
 the demo and the report screenshots. Numbers are controlled by constants
 at the top of this file.
 """

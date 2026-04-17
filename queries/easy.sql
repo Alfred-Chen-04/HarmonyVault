@@ -1,5 +1,5 @@
 -- Easy queries (report §6). Each block = one query the CLI/Web UI can run.
--- Owner: Sky Zhou (sxz903).
+-- Owner: Jacob Liebson (jel212).
 
 -- E1: list every registered user ordered by signup date
 SELECT userID, username, email, dateCreated

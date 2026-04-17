@@ -4,7 +4,7 @@ Runs every file under ``schema/`` in filename order, then calls the
 Spotify ingest and synthetic-data generator. Idempotent: re-running the
 script drops the existing database and rebuilds it.
 
-Owner: Jacob Liebson (jel212) — data track.
+Owner: Sky Zhou (sxz903) — data track.
 """
 
 from __future__ import annotations

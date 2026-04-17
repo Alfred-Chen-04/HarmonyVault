@@ -1,5 +1,5 @@
 -- Hard queries (report §6): NOT EXISTS, correlated subqueries, multi-join.
--- Owner: Sky Zhou (sxz903).
+-- Owner: Jacob Liebson (jel212).
 
 -- H1: "orphaned clips" - clips a user owns that are not in any project
 --     (the use case from the proposal)

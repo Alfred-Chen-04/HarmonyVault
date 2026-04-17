@@ -1,8 +1,8 @@
 # CSV Interchange Format
 
-**Owner**: Alfred Chen (qxc225). **Audience**: Jacob (writes the CSVs) and Sky (loads them into his Java CLI's MySQL instance).
+**Owner**: Alfred Chen (qxc225). **Audience**: Sky (writes the CSVs) and Jacob (loads them into his Java CLI's MySQL instance).
 
-This document specifies the CSV files that Jacob's data-generation scripts must produce so that Sky's Java CLI can load them with `LOAD DATA INFILE` (or a Java parser). The schema in [schema/01_create_tables.sql](../schema/01_create_tables.sql) is authoritative; this spec is derived from it. If the two ever disagree, the schema wins.
+This document specifies the CSV files that Sky's data-generation scripts must produce so that Jacob's Java CLI can load them with `LOAD DATA INFILE` (or a Java parser). The schema in [schema/01_create_tables.sql](../schema/01_create_tables.sql) is authoritative; this spec is derived from it. If the two ever disagree, the schema wins.
 
 ## Global rules
 
@@ -35,7 +35,7 @@ Loaders must ingest in this order because each file references IDs from earlier 
 8. `project_collaborators.csv` *(FK → Projects + Users)*
 9. `clip_versions.csv` *(FK → Clips)*
 
-Sky's Java loader should also run `SET FOREIGN_KEY_CHECKS = 0;` before loading and `= 1;` after, since MySQL validates FKs row-by-row and a mid-load failure will leave the DB partially populated.
+Jacob's Java loader should also run `SET FOREIGN_KEY_CHECKS = 0;` before loading and `= 1;` after, since MySQL validates FKs row-by-row and a mid-load failure will leave the DB partially populated.
 
 ## Per-table spec
 
@@ -100,7 +100,7 @@ Composite PK `(clipID, tagID)` — no duplicates.
 | 1 | `projectID` | INT | FK → `projects.csv`. |
 | 2 | `clipID` | INT | FK → `clips.csv`. |
 
-Composite PK `(projectID, clipID)` — no duplicates. The generator should respect the trigger rule in [schema/03_triggers.sql](../schema/03_triggers.sql): a clip's `userID` must be the project's owner or a listed collaborator. If the rule is violated, Sky's MySQL will reject the row.
+Composite PK `(projectID, clipID)` — no duplicates. The generator should respect the trigger rule in [schema/03_triggers.sql](../schema/03_triggers.sql): a clip's `userID` must be the project's owner or a listed collaborator. If the rule is violated, Jacob's MySQL will reject the row.
 
 ### 8. `project_collaborators.csv`
 | # | Column | Type | Notes |
@@ -122,7 +122,7 @@ Composite PK `(projectID, userID)`. The project's owner does **not** need to be 
 | 5 | `filepath` | VARCHAR(512) |  |
 | 6 | `dateCreated` | DATETIME | ISO 8601. |
 
-## Reference `LOAD DATA INFILE` snippet for Sky
+## Reference `LOAD DATA INFILE` snippet for Jacob
 
 ```sql
 SET FOREIGN_KEY_CHECKS = 0;
@@ -146,7 +146,7 @@ SET UNIQUE_CHECKS = 1;
 
 ## Golden samples
 
-Jacob should commit a tiny, hand-sized sample set under `data/csv_sample/` (≤10 rows per file) so Sky can exercise his loader against real, FK-consistent data before the full generator is finished. Full-size generated outputs go into `data/csv/` (which is `.gitignore`d).
+Sky should commit a tiny, hand-sized sample set under `data/csv_sample/` (≤10 rows per file) so Jacob can exercise his loader against real, FK-consistent data before the full generator is finished. Full-size generated outputs go into `data/csv/` (which is `.gitignore`d).
 
 ## Changelog
 

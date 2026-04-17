@@ -97,13 +97,13 @@ Explicitly address the TA's proposal-feedback item 5 by showing the **corrected 
 
 Each of these is then collapsed into the corresponding entity (`Clips.userID`, `Projects.ownerUserID`, `MusicalAttributes` keyed on `clipID`). The full derivation is in [docs/normalization.md §"Why the proposal's original relationship schemas were incorrect"](../docs/normalization.md).
 
-## 7. Example Queries  *[Sky]*
+## 7. Example Queries  *[Jacob]*
 
 *Rubric §i.* Table of nine queries (E1–E3, M1–M3, H1–H3) with an English description for each (`queries/explanations.md`), then show **one** query — recommended: H1 — in all three of SQL, relational algebra, and tuple relational calculus, per [queries/ra_trc.md](../queries/ra_trc.md). Include screenshots of representative outputs from the running Java CLI.
 
 The query list must explicitly include at least one query from each of the collaboration (U6–U8) and administrative (U9–U11) use-case groups.
 
-## 8. Implementation  *[Jacob for data volumes; Sky for Java CLI]*
+## 8. Implementation  *[Sky for data volumes; Jacob for Java CLI]*
 
 *Rubric §j.* OS targets: macOS and Linux. DBMS: MySQL 8.x. Data-generation language: Python 3.11 with pandas and Faker (emits nine CSVs). Command-line interface language: Java, using `mysql-connector-j` with `allowLoadLocalInfile=true` on the JDBC URL. Data flows as CSV files from this repo to the Java CLI's MySQL instance per the interchange contract in [docs/csv_format.md](../docs/csv_format.md).
 
@@ -117,15 +117,15 @@ Reproduce [docs/integrity_constraints.md §5–§6](../docs/integrity_constraint
 
 ## 10. Per-Member Contributions  *[shared — Alfred integrates]*
 
-*Rubric §k.* Copy the three "Standalone: yes" paragraphs from [docs/work_division.md](../docs/work_division.md) verbatim — one each for Alfred (schema + data-contract track), Jacob (data track), and Sky (application track, Java CLI in a separate repository). The archived Python CLI and Flask web UI are explicitly called out as a pre-pivot stretch goal, not as individual contributions.
+*Rubric §k.* Copy the three "Standalone: yes" paragraphs from [docs/work_division.md](../docs/work_division.md) verbatim — one each for Alfred (schema + data-contract track), Sky (data track), and Jacob (application track, Java CLI in a separate repository). The archived Python CLI and Flask web UI are explicitly called out as a pre-pivot stretch goal, not as individual contributions.
 
 ## 11. What We Learned  *[one paragraph per member]*
 
 *Rubric §l.* One paragraph per team member covering a concept not on the lecture slides:
 
 - **Alfred**: Semantic constraints that cross tables (e.g. the project-clip access-control rule) cannot be expressed as CHECKs because MySQL CHECKs are single-row. Implementing them as triggers raises a secondary question — interaction with cascade deletes — that the lectures did not cover. Writing this out forced a clear split between what belongs in the schema, what belongs in a trigger, and what belongs at the application layer.
-- **Jacob**: Real-world data ingestion is dirtier than the course datasets. The Kaggle Spotify CSV mixes integer key codes (0–11) with string mode values ("major"/"minor") that sometimes arrive as booleans (0/1) depending on the file; normalizing both into our `CHECK` domains required more translation code than the lectures suggested was typical. Faker's `unique` decorators also deplete quickly at 500-user scale, which surfaced the difference between uniqueness enforcement in-memory vs. at the DBMS.
-- **Sky**: The same information need rendered in SQL, relational algebra, and tuple relational calculus is surprisingly un-mechanical — some SQL features (`GROUP BY`, `ORDER BY`, aggregate outputs) have no classical RA analogue. Picking which query to render in all three formalisms came down to choosing one that stays within selection / projection / join / rename, which is a constraint the lectures state but don't exercise at realistic sizes.
+- **Sky**: Real-world data ingestion is dirtier than the course datasets. The Kaggle Spotify CSV mixes integer key codes (0–11) with string mode values ("major"/"minor") that sometimes arrive as booleans (0/1) depending on the file; normalizing both into our `CHECK` domains required more translation code than the lectures suggested was typical. Faker's `unique` decorators also deplete quickly at 500-user scale, which surfaced the difference between uniqueness enforcement in-memory vs. at the DBMS.
+- **Jacob**: The same information need rendered in SQL, relational algebra, and tuple relational calculus is surprisingly un-mechanical — some SQL features (`GROUP BY`, `ORDER BY`, aggregate outputs) have no classical RA analogue. Picking which query to render in all three formalisms came down to choosing one that stays within selection / projection / join / rename, which is a constraint the lectures state but don't exercise at realistic sizes.
 
 ## 12. Conclusions  *[shared]*
 
@@ -135,11 +135,11 @@ Short section summarizing what works, the scale achieved, and what we would do d
 
 ## Appendix 1 — Installation Manual
 
-Expanded version of [README.md](../README.md) with hand-holding for the TA. Covers the Docker-MySQL option, the Kaggle CSV download step, the Python `venv` creation, and the two-repo handoff (Alfred/Jacob produce CSVs here → Sky's Java CLI consumes them in its own repo).
+Expanded version of [README.md](../README.md) with hand-holding for the TA. Covers the Docker-MySQL option, the Kaggle CSV download step, the Python `venv` creation, and the two-repo handoff (Alfred/Sky produce CSVs here → Jacob's Java CLI consumes them in its own repo).
 
 ## Appendix 2 — User Manual
 
-Walk-through screenshots of Sky's Java CLI:
+Walk-through screenshots of Jacob's Java CLI:
 
 1. Java CLI equivalent of `clips search --key C --mode minor --tempo-min 90 --tempo-max 120`.
 2. Java CLI equivalent of `projects create --name "Album Draft" --user alfred`.
@@ -150,4 +150,4 @@ Walk-through screenshots of Sky's Java CLI:
 - **Module map** (this repo): [schema/](../schema/), [scripts/](../scripts/), [queries/](../queries/), [docs/](../docs/), [tests/](../tests/).
 - **CSV interchange contract**: summarize [docs/csv_format.md](../docs/csv_format.md) — column order, null marker `\N`, line terminator `\n`, explicit AUTO_INCREMENT IDs, FK-safe load order.
 - **Conventions**: every SQL file lives in [queries/](../queries/); every schema change updates [schema/01_create_tables.sql](../schema/01_create_tables.sql), the ER diagram, [docs/normalization.md](../docs/normalization.md), and (if column order changes) [docs/csv_format.md](../docs/csv_format.md) in the same commit.
-- **Testing**: `pytest` runs the schema-presence check and the nine SQL smoke tests; the Java CLI has its own test suite in Sky's repository.
+- **Testing**: `pytest` runs the schema-presence check and the nine SQL smoke tests; the Java CLI has its own test suite in Jacob's repository.

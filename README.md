@@ -14,12 +14,12 @@ The project is split across two repositories:
 
 | Component | Repository | Owner |
 | --- | --- | --- |
-| Schema, docs, data generation, canonical queries | **this repo** | Alfred (schema + docs), Jacob (data) |
-| Command-line interface | Sky's separate Java repository | Sky |
+| Schema, docs, data generation, canonical queries | **this repo** | Alfred (schema + docs), Sky (data) |
+| Command-line interface | Jacob's separate Java repository | Jacob |
 
-The command-line interface is written in **Java** and lives in Sky's separate repository. The obsolete Python CLI and Flask web UI are archived under [legacy_python/](legacy_python/) for reference. See [docs/work_division.md](docs/work_division.md) for the full per-member breakdown.
+The command-line interface is written in **Java** and lives in Jacob's separate repository. The obsolete Python CLI and Flask web UI are archived under [legacy_python/](legacy_python/) for reference. See [docs/work_division.md](docs/work_division.md) for the full per-member breakdown.
 
-Data flows from this repo to Sky's Java CLI through **one CSV file per table**. The interchange contract is defined in [docs/csv_format.md](docs/csv_format.md).
+Data flows from this repo to Jacob's Java CLI through **one CSV file per table**. The interchange contract is defined in [docs/csv_format.md](docs/csv_format.md).
 
 ## Prerequisites
 
@@ -50,7 +50,7 @@ This runs the two CSV generators in order:
 1. [scripts/load_spotify.py](scripts/load_spotify.py) — emits `data/csv/clips.csv` and `data/csv/musical_attributes.csv` from the Kaggle Spotify CSV.
 2. [scripts/generate_synthetic.py](scripts/generate_synthetic.py) — emits the remaining seven CSV files (users, tags, projects, clip-tags, project-clips, project-collaborators, clip-versions) with Faker.
 
-The nine output files follow the column order and encoding rules in [docs/csv_format.md](docs/csv_format.md). Sky's Java CLI consumes them with `LOAD DATA LOCAL INFILE` in the FK-safe order listed in that spec.
+The nine output files follow the column order and encoding rules in [docs/csv_format.md](docs/csv_format.md). Jacob's Java CLI consumes them with `LOAD DATA LOCAL INFILE` in the FK-safe order listed in that spec.
 
 A committed set of golden samples (≤ 10 rows per file) lives under `data/csv_sample/` for development against a realistic, FK-consistent dataset before the full generator runs.
 

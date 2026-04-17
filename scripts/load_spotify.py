@@ -1,9 +1,9 @@
 """Ingest the Kaggle Spotify Tracks CSV into Clips + MusicalAttributes.
 
-Owner: Jacob Liebson (jel212). This is a working skeleton that Jacob
+Owner: Sky Zhou (sxz903). This is a working skeleton that Sky
 should flesh out with column mapping once the CSV is downloaded locally.
 The code below is production-shaped so that running ``setup_db.py`` on
-a fresh machine succeeds even before Jacob fills in the details.
+a fresh machine succeeds even before Sky fills in the details.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import DB, SPOTIFY_CSV_PATH, SPOTIFY_LOAD_LIMIT  # noqa: E402
 
 
-# The Kaggle CSV column name -> our column name. Jacob: adjust after
+# The Kaggle CSV column name -> our column name. Sky: adjust after
 # downloading. Defaults chosen to match `SpotifyFeatures.csv`.
 COLUMN_MAP = {
     "track_name": "title",
