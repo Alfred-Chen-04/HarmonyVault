@@ -113,25 +113,29 @@
         <mxCell id="e_ma_a4" style="endArrow=none;html=1;" edge="1" parent="1" source="ent_ma" target="attr_ma_ts"><mxGeometry relative="1" as="geometry"/></mxCell>
 
         <!-- ClipVersions (weak, depends on Clips) -->
+        <!-- versionID omitted: it is a relational-level surrogate key added
+             during schema mapping and is NOT part of the conceptual ER model.
+             The partial key is versionNumber (dashed ellipse + underline). -->
         <mxCell id="ent_cv" value="ClipVersions" style="shape=ext;double=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="1240" y="620" width="170" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="attr_cv_versionid" value="versionID" style="ellipse;whiteSpace=wrap;html=1;fontStyle=4;fillColor=#ffffff;" vertex="1" parent="1">
-          <mxGeometry x="1450" y="570" width="100" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="attr_cv_versionnum" value="versionNumber" style="ellipse;whiteSpace=wrap;html=1;fontStyle=4;fillColor=#ffffff;" vertex="1" parent="1">
-          <mxGeometry x="1450" y="610" width="120" height="30" as="geometry" />
+        <!-- versionNumber = partial key: dashed ellipse border + underlined text -->
+        <mxCell id="attr_cv_versionnum" value="versionNumber" style="ellipse;whiteSpace=wrap;html=1;fontStyle=4;dashed=1;dashPattern=8 4;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="1450" y="590" width="130" height="30" as="geometry" />
         </mxCell>
         <mxCell id="attr_cv_notes" value="notes" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="1">
-          <mxGeometry x="1450" y="650" width="100" height="30" as="geometry" />
+          <mxGeometry x="1450" y="630" width="100" height="30" as="geometry" />
         </mxCell>
         <mxCell id="attr_cv_filepath" value="filepath" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="1">
-          <mxGeometry x="1450" y="690" width="100" height="30" as="geometry" />
+          <mxGeometry x="1450" y="670" width="100" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="e_cv_a1" style="endArrow=none;html=1;" edge="1" parent="1" source="ent_cv" target="attr_cv_versionid"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="attr_cv_datecreated" value="dateCreated" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="1450" y="710" width="110" height="30" as="geometry" />
+        </mxCell>
         <mxCell id="e_cv_a2" style="endArrow=none;html=1;" edge="1" parent="1" source="ent_cv" target="attr_cv_versionnum"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e_cv_a3" style="endArrow=none;html=1;" edge="1" parent="1" source="ent_cv" target="attr_cv_notes"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e_cv_a4" style="endArrow=none;html=1;" edge="1" parent="1" source="ent_cv" target="attr_cv_filepath"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_cv_a5" style="endArrow=none;html=1;" edge="1" parent="1" source="ent_cv" target="attr_cv_datecreated"><mxGeometry relative="1" as="geometry"/></mxCell>
 
         <!-- ============ RELATIONSHIPS (diamonds) ============ -->
 
@@ -228,8 +232,8 @@
         <mxCell id="title" value="HarmonyVault — ER Diagram (revised per TA feedback)" style="text;html=1;fontSize=18;fontStyle=1;align=center;" vertex="1" parent="1">
           <mxGeometry x="500" y="0" width="600" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="subtitle" value="Fixes: no FKs inside entity boxes · role &amp; addedAt on Collaborates · MusicalAttributes &amp; ClipVersions as weak entities" style="text;html=1;fontSize=11;align=center;fontStyle=2;" vertex="1" parent="1">
-          <mxGeometry x="400" y="1060" width="800" height="20" as="geometry" />
+        <mxCell id="subtitle" value="Fixes: no FKs inside entity boxes · role &amp; addedAt on Collaborates · weak entities with double border · identifying rels with double diamond · versionNumber as partial key (dashed ellipse, no versionID)" style="text;html=1;fontSize=10;align=center;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="300" y="1075" width="1000" height="20" as="geometry" />
         </mxCell>
 
       </root>

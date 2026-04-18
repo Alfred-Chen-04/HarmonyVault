@@ -2,16 +2,11 @@
 
 **Course**: CSDS 341 Introduction to Database Systems, Spring 2026
 **Team**: Jacob Liebson (jel212), Sky Zhou (sxz903), Alfred Chen (qxc225)
-**Report length target**: ≤ 15 pages (per spec)
 **Submission**: single zip to Canvas, 2026-05-01 23:59
-
-> Writing guidance for the team: every section below corresponds to a rubric item in the project specification. Keep each section tight; do not exceed the 15-page cap. Screenshots, query outputs, and the ER diagram go in `report/assets/` and are embedded here by reference. Section owners are listed in square brackets after each heading — they are responsible for the first draft; Alfred does the final integration pass.
 
 ---
 
-## 1. Application Background  *[Alfred]*
-
-*Rubric §b.* Motivation, problem statement, existing solutions, and comparison to HarmonyVault.
+## 1. Application Background
 
 ### 1.1 The problem
 
@@ -28,20 +23,18 @@ The workload is exactly what relational systems are good at:
 
 ### 1.3 Existing solutions and how HarmonyVault differs
 
-The TA's proposal feedback (item 2) asked us to compare HarmonyVault with existing tools. Four are directly adjacent:
-
 | Tool | What it offers | What it lacks relative to HarmonyVault |
 | --- | --- | --- |
-| **Splice** (<https://splice.com>) | Cloud loop marketplace with key/BPM search and DAW integration | User does not own the catalog; cannot store or share private clips; no relational access for custom queries |
-| **Loopcloud** (<https://www.loopcloud.com>) | Local caching client over a vendor loop library | Same vendor-lock-in problem as Splice; no project / collaboration model for the user's own clips |
-| **Ableton Live Browser**, **Native Instruments Maschine** | In-DAW organization of samples, with tagging and preview | Tied to one workstation and one DAW; cannot be queried from outside the host application; no shareable project model |
-| **iTunes / Apple Music library** | Indexed library with playlists | Built around finished tracks, not raw musical ideas; no per-clip musical attributes, no versioning, no collaboration |
+| **Splice** | Cloud loop marketplace with key/BPM search and DAW integration | User does not own the catalog; cannot store or share private clips; no relational access for custom queries |
+| **Loopcloud** | Local caching client over a vendor loop library | Same vendor-lock-in problem as Splice; no project / collaboration model for the user's own clips |
+| **Ableton Live Browser / NI Maschine** | In-DAW sample organization with tagging and preview | Tied to one workstation and one DAW; cannot be queried outside the host; no shareable project model |
+| **iTunes / Apple Music** | Indexed library with playlists | Built around finished tracks; no per-clip musical attributes, no versioning, no collaboration |
 
 HarmonyVault differs on four axes: (a) the user owns the catalog and its schema; (b) every attribute is queryable through standard SQL rather than a vendor UI; (c) the data model is relational end-to-end, so admin-style aggregate queries and cross-user analytics are possible; and (d) projects are first-class and can be shared through the `ProjectCollaborators` relation, which none of the four tools above support for a user's personal library.
 
-## 2. What HarmonyVault Is Used For  *[Alfred]*
+---
 
-*Rubric §c.* Use cases that cover the platform's functionality, including the collaboration and administrative scenarios the TA's proposal feedback (item 3) asked us to add.
+## 2. What HarmonyVault Is Used For
 
 ### 2.1 Personal-catalog use cases
 
@@ -49,105 +42,425 @@ HarmonyVault differs on four axes: (a) the user owns the catalog and its schema;
 - **U2. Tag an idea.** The user applies one or more free-form tags (`lofi`, `cinematic`, `aggressive`) through the `Tags` / `ClipTags` relations. Tag vocabulary is per-user, enforced by `UNIQUE(userID, tagName)`.
 - **U3. Assemble a project.** The user creates a `Projects` row with a name and description, then adds clips through `ProjectClips`. A trigger (`schema/03_triggers.sql`) prevents adding a clip that the user does not own and is not a collaborator on.
 - **U4. Version a clip.** When the user revises a clip, a new row is inserted into `ClipVersions` with an auto-assigned sequential `versionNumber`. The clip's canonical `filepath` stays on the original `Clips` row for backwards compatibility with references elsewhere.
-- **U5. Search by musical criteria.** The user queries clips by key, mode, tempo range, and tag simultaneously — the kind of filter that a filesystem cannot answer. Realized by the Java CLI as `clips search --key C --mode minor --tempo-min 90 --tempo-max 120 --tag cinematic`.
+- **U5. Search by musical criteria.** The user queries clips by key, mode, tempo range, and tag simultaneously. Realized by the Java CLI as `clips search --key C --mode minor --tempo-min 90 --tempo-max 120`.
 
-### 2.2 Collaboration use cases (added per TA feedback)
+### 2.2 Collaboration use cases
 
 - **U6. Invite a collaborator.** A project owner inserts a row into `ProjectCollaborators` with `role='editor'` or `'viewer'`. The project's owner is already registered as a collaborator via an insert trigger on `Projects`, so the list view includes them by default.
 - **U7. Collaborator adds a clip.** An `editor` on project P who owns clip C can add C to P. The project-clip access-control trigger verifies the clip's owner is either P's owner or a listed collaborator; otherwise the insert is rejected with `SQLSTATE 45000`.
 - **U8. Viewer-only access.** A `viewer` collaborator can list and play project clips but cannot insert into `ProjectClips`. This is enforced at the application layer because the role check requires session context the DBMS does not have.
 
-### 2.3 Administrative use cases (added per TA feedback)
+### 2.3 Administrative use cases
 
-- **U9. Top tags across the catalog.** An admin aggregates across all users to find the most-used tags — `SELECT tagName, COUNT(*) FROM ClipTags JOIN Tags USING (tagID) GROUP BY tagName ORDER BY 2 DESC`. This is impossible in any of the four competing tools in §1.3.
-- **U10. Most prolific collaborators.** `SELECT userID, COUNT(DISTINCT projectID) FROM ProjectCollaborators GROUP BY userID ORDER BY 2 DESC LIMIT 10`. Demonstrates cross-user reporting that requires a shared relational store.
-- **U11. Musical-attribute distribution.** An admin computes the tempo histogram or the key-mode cross-tab over every clip, useful for seeding recommendations or debugging data-generation bias. Implemented as M3 in [queries/medium.sql](../queries/medium.sql).
+- **U9. Top tags across the catalog.** An admin aggregates across all users to find the most-used tags (query A1 in `queries/admin.sql`). This cross-user query is impossible in any of the four competing tools in §1.3.
+- **U10. Most prolific collaborators.** Per-user statistics — clips owned, projects owned, memberships as non-owner collaborator (query A2 in `queries/admin.sql`). Demonstrates cross-user reporting that requires a shared relational store.
+- **U11. Musical-attribute distribution.** Tempo histogram over the entire catalog (query A3 in `queries/admin.sql`), useful for debugging data-generation bias and seeding recommendations.
 
-## 3. Data Description and Constraints  *[Alfred]*
+---
 
-*Rubric §e.* The full constraint catalog is in [docs/integrity_constraints.md](../docs/integrity_constraints.md); this section summarizes it at the level a reader of the report needs.
+## 3. Data Description and Constraints
 
-HarmonyVault enforces integrity on four layers: entity integrity (primary keys on every relation), referential integrity (11 foreign keys with explicit `ON DELETE` / `ON UPDATE` actions, documented in [docs/integrity_constraints.md §2](../docs/integrity_constraints.md)), domain constraints (CHECKs on `email` shape, `duration > 0`, `mode ∈ {major, minor}`, `0 < tempo < 400`, the 17-value pitch-class set, `role ∈ {owner, editor, viewer}`, and `versionNumber ≥ 1`), and uniqueness (`Users.username`, `Users.email`, `Projects(ownerUserID, name)`, `Tags(userID, tagName)`, `ClipVersions(clipID, versionNumber)`).
+HarmonyVault stores metadata for audio clips — not the audio itself. The nine relations, their purposes, and their attributes are as follows.
 
-Four semantic rules cannot be expressed declaratively and are enforced by triggers in [schema/03_triggers.sql](../schema/03_triggers.sql): (1) every project owner is auto-inserted into `ProjectCollaborators` so "list collaborators" always includes them; (2) a clip can only be added to a project if its owner is the project owner or a listed collaborator; (3) `ClipVersions.versionNumber` is auto-assigned to `MAX(existing) + 1` on null/zero input; (4) `versionNumber` is immutable once set.
+| Relation | Purpose | Key attributes |
+| --- | --- | --- |
+| `Users` | Application accounts | `userID` (PK), `username` (UNIQUE), `email` (UNIQUE), `dateCreated` |
+| `Clips` | One row per audio idea | `clipID` (PK), `userID` (FK→Users), `title`, `duration`, `filepath`, `dateCreated` |
+| `MusicalAttributes` | One row per clip (1-to-1) | `clipID` (PK+FK→Clips), `musicalKey`, `mode`, `tempo`, `timeSignature` |
+| `Projects` | Named collections of clips | `projectID` (PK), `ownerUserID` (FK→Users), `name`, `description`, `dateCreated` |
+| `Tags` | Per-user tag vocabulary | `tagID` (PK), `userID` (FK→Users), `tagName` |
+| `ClipTags` | M-N: clips ↔ tags | (`clipID`, `tagID`) composite PK |
+| `ProjectClips` | M-N: projects ↔ clips | (`projectID`, `clipID`) composite PK |
+| `ProjectCollaborators` | M-N: users ↔ projects with a role | (`projectID`, `userID`) composite PK; `role ∈ {owner, editor, viewer}` |
+| `ClipVersions` | Version history of a clip | `versionID` (PK), `clipID` (FK→Clips), `versionNumber` (partial key, sequential) |
 
-## 4. ER Diagram  *[Alfred]*
+**Integrity is enforced on four layers:**
 
-*Rubric §d.* Embed [docs/ER_diagram.png](../docs/ER_diagram.png). The caption should note the three fixes made in response to the TA's proposal feedback (item 4):
+1. **Entity integrity** — every relation has a `PRIMARY KEY`; no key attribute is NULL.
+2. **Referential integrity** — 11 foreign keys with explicit `ON DELETE` / `ON UPDATE` actions. `RESTRICT` on `Clips.userID` and `Projects.ownerUserID` prevents deleting a user who still owns data; all other relationships cascade because dependent rows are meaningless without their parent.
+3. **Domain constraints (CHECK)** — `email LIKE '%_@_%._%'`; `duration > 0`; `mode IN ('major','minor')`; `0 < tempo < 400`; `musicalKey` restricted to the 17 pitch-class values; `role IN ('owner','editor','viewer')`; `versionNumber ≥ 1`.
+4. **Uniqueness** — `Users.username`, `Users.email`; `Projects(ownerUserID, name)`; `Tags(userID, tagName)`; `ClipVersions(clipID, versionNumber)`.
 
-1. **No foreign-key attributes inside entity boxes.** The proposal had `userID` inside `Clips`, `Tags`, and `Projects`, and `clipID` inside `MusicalAttributes`. All removed; the relationship diamonds express those links.
-2. **Relationship attributes on the diamond, not on the entity.** `role` and `addedAt` hang off the `Collaborates` diamond, not off `Project` or `User`.
-3. **Weak entities drawn with double borders.** `MusicalAttributes` and `ClipVersion` are weak entities of `Clip`; their identifying relationships (`Has`, `HasVersion`) use double-lined diamonds.
+The four trigger-enforced semantic rules and the application-layer validations are described in §9.
 
-The entity / relationship content is enumerated in [docs/ER_diagram.md](../docs/ER_diagram.md).
+---
 
-## 5. Functional Dependencies  *[Alfred]*
+## 4. ER Diagram
 
-*Rubric §g.* Full FD set and minimal covers are in [docs/functional_dependencies.md](../docs/functional_dependencies.md). In the report body, reproduce the "Summary of candidate keys" table from that document and call out the four relations with more than one candidate key: `Users` (three), `Projects` (two), `Tags` (two), `ClipVersions` (two).
+![HarmonyVault ER Diagram](../docs/ER_diagram.png)
 
-## 6. Schema in 3NF / BCNF  *[Alfred]*
+**Figure 1.** HarmonyVault Entity-Relationship Diagram. Generated by `scripts/generate_er_diagram.py`; editable source at `docs/ER_diagram.drawio`.
 
-*Rubric §h.* Copy the nine `CREATE TABLE` statements from [schema/01_create_tables.sql](../schema/01_create_tables.sql), then reproduce the BCNF proof from [docs/normalization.md](../docs/normalization.md). Every relation is in BCNF (strictly stronger than 3NF) because every non-trivial FD has a candidate key on its left-hand side.
+The diagram corrects all issues flagged in the TA's proposal feedback:
 
-Explicitly address the TA's proposal-feedback item 5 by showing the **corrected intermediate relationship schemas** before the fold into entity tables:
+1. **No foreign-key attributes inside entity boxes.** The proposal had `userID` drawn inside `Clips`, `Tags`, and `Projects`, and `clipID` inside `MusicalAttributes`. At the ER level the relationship diamond already expresses the connection; entity boxes show only the entity's own attributes. All FK attributes have been removed from entity boxes.
 
-- `Has(`**`clipID`**`, userID)` — many-to-one; PK is `{clipID}`, the "many" side.
-- `Create(`**`projectID`**`, userID)` — many-to-one; PK is `{projectID}`.
-- `To(`**`clipID`**`, attributeID)` — one-to-one; PK is a single side, `{clipID}`.
+2. **Relationship attributes on the diamond.** `role` and `addedAt` are drawn as attribute ellipses attached to the `Collaborates` diamond, not to the `Users` or `Projects` boxes.
 
-Each of these is then collapsed into the corresponding entity (`Clips.userID`, `Projects.ownerUserID`, `MusicalAttributes` keyed on `clipID`). The full derivation is in [docs/normalization.md §"Why the proposal's original relationship schemas were incorrect"](../docs/normalization.md).
+3. **Weak entities with double borders; identifying relationships with double diamonds.** `MusicalAttributes` and `ClipVersions` are weak entities of `Clips` — they cannot exist without their parent clip. Their entity boxes use double borders, and their identifying relationships (`HasAttributes` and `HasVersion`) use double-lined diamonds.
 
-## 7. Example Queries  *[Jacob]*
+4. **`versionNumber` shown as a partial key (dashed ellipse + underlined text).** `versionID` is a relational-level surrogate key added during schema mapping and does not appear in the conceptual ER model. The partial key of `ClipVersions` is `versionNumber`, which uniquely identifies a version *within* a given clip (the identifying owner is `Clips`).
 
-*Rubric §i.* Table of nine queries (E1–E3, M1–M3, H1–H3) with an English description for each (`queries/explanations.md`), then show **one** query — recommended: H1 — in all three of SQL, relational algebra, and tuple relational calculus, per [queries/ra_trc.md](../queries/ra_trc.md). Include screenshots of representative outputs from the running Java CLI.
+The eight entity-relationship pairs and their cardinalities are:
 
-The query list must explicitly include at least one query from each of the collaboration (U6–U8) and administrative (U9–U11) use-case groups.
+| Relationship | Between | Cardinality | Participation |
+| --- | --- | --- | --- |
+| Owns | User — Clip | 1 : N | Clip total (every clip must have an owner) |
+| HasAttributes | Clip — MusicalAttributes | 1 : 1 | MusicalAttributes total (identifying) |
+| Creates | User — Project | 1 : N | Project total (every project must have an owner) |
+| Defines | User — Tag | 1 : N | Tag total (every tag belongs to a user) |
+| Tagged | Clip — Tag | M : N | partial both sides |
+| Includes | Project — Clip | M : N | partial both sides |
+| Collaborates | User — Project | M : N | partial both sides; carries `role`, `addedAt` |
+| HasVersion | Clip — ClipVersion | 1 : N | ClipVersion total (identifying) |
 
-## 8. Implementation  *[Sky for data volumes; Jacob for Java CLI]*
+---
 
-*Rubric §j.* OS targets: macOS and Linux. DBMS: MySQL 8.x. Data-generation language: Python 3.11 with pandas and Faker (emits nine CSVs). Command-line interface language: Java, using `mysql-connector-j` with `allowLoadLocalInfile=true` on the JDBC URL. Data flows as CSV files from this repo to the Java CLI's MySQL instance per the interchange contract in [docs/csv_format.md](../docs/csv_format.md).
+## 5. Functional Dependencies
 
-Record final row counts produced by `scripts/setup_db.py`: expected **≥ 10,000** clips + matching `MusicalAttributes` rows from Spotify, plus ≥ 500 users, ≥ 80 projects, and the synthetic tag / collaborator / version rows. Include wall-clock timings for the generator and for the Java `LOAD DATA INFILE` ingest as the data-volume evidence.
+Full FD sets and minimal covers for every relation are in `docs/functional_dependencies.md`. The table below summarises the candidate keys; relations with more than one candidate key are highlighted.
 
-Also briefly describe how the Java CLI wraps its bulk load in `SET FOREIGN_KEY_CHECKS = 0 … 1` to avoid row-by-row FK validation on the ingest path.
+| Relation | Candidate keys |
+| --- | --- |
+| **Users** | {userID}, {username}, {email} — **three candidate keys** |
+| Clips | {clipID} |
+| MusicalAttributes | {clipID} |
+| **Projects** | {projectID}, {ownerUserID, name} — **two candidate keys** |
+| **Tags** | {tagID}, {userID, tagName} — **two candidate keys** |
+| ClipTags | {clipID, tagID} |
+| ProjectClips | {projectID, clipID} |
+| ProjectCollaborators | {projectID, userID} |
+| **ClipVersions** | {versionID}, {clipID, versionNumber} — **two candidate keys** |
 
-## 9. Integrity Constraints in Practice  *[Alfred]*
+**Why multiple candidate keys arise:**
 
-Reproduce [docs/integrity_constraints.md §5–§6](../docs/integrity_constraints.md): the four trigger-enforced rules and the application-layer validations, plus the rationale for splitting enforcement across CHECKs, triggers, and the application layer. Key tradeoff to highlight: CHECKs are declarative and evaluated by the DBMS on every row; triggers are necessary when the rule crosses tables (U7's project-clip access control is the canonical example); application-layer validation is used when the rule needs context (the authenticated user's role) that the DBMS does not have.
+- `Users` has three because both `username` and `email` are declared `UNIQUE` in addition to the surrogate `userID`. Each unique non-null column is a candidate key.
+- `Projects` has two because the business rule "a user cannot reuse a project name" is enforced by `UNIQUE(ownerUserID, name)`, creating the composite candidate key `{ownerUserID, name}` alongside the surrogate `projectID`.
+- `Tags` similarly: `UNIQUE(userID, tagName)` is a business key; `tagID` is the surrogate.
+- `ClipVersions`: `versionID` is a surrogate; `(clipID, versionNumber)` is the natural business key enforced by `UNIQUE(clipID, versionNumber)`.
 
-## 10. Per-Member Contributions  *[shared — Alfred integrates]*
+**Representative minimal covers** (full set in `docs/functional_dependencies.md`):
 
-*Rubric §k.* Copy the three "Standalone: yes" paragraphs from [docs/work_division.md](../docs/work_division.md) verbatim — one each for Alfred (schema + data-contract track), Sky (data track), and Jacob (application track, Java CLI in a separate repository). The archived Python CLI and Flask web UI are explicitly called out as a pre-pivot stretch goal, not as individual contributions.
+```
+Users:     userID → username, email, dateCreated
+Clips:     clipID → userID, title, duration, filepath, dateCreated
+Projects:  projectID → ownerUserID, name, description, dateCreated
+           ownerUserID, name → projectID
+ProjectCollaborators: projectID, userID → role, addedAt
+ClipVersions: versionID → clipID, versionNumber, notes, filepath, dateCreated
+              clipID, versionNumber → versionID
+```
 
-## 11. What We Learned  *[one paragraph per member]*
+---
 
-*Rubric §l.* One paragraph per team member covering a concept not on the lecture slides:
+## 6. Schema in 3NF / BCNF
 
-- **Alfred**: Semantic constraints that cross tables (e.g. the project-clip access-control rule) cannot be expressed as CHECKs because MySQL CHECKs are single-row. Implementing them as triggers raises a secondary question — interaction with cascade deletes — that the lectures did not cover. Writing this out forced a clear split between what belongs in the schema, what belongs in a trigger, and what belongs at the application layer.
-- **Sky**: Real-world data ingestion is dirtier than the course datasets. The Kaggle Spotify CSV mixes integer key codes (0–11) with string mode values ("major"/"minor") that sometimes arrive as booleans (0/1) depending on the file; normalizing both into our `CHECK` domains required more translation code than the lectures suggested was typical. Faker's `unique` decorators also deplete quickly at 500-user scale, which surfaced the difference between uniqueness enforcement in-memory vs. at the DBMS.
-- **Jacob**: The same information need rendered in SQL, relational algebra, and tuple relational calculus is surprisingly un-mechanical — some SQL features (`GROUP BY`, `ORDER BY`, aggregate outputs) have no classical RA analogue. Picking which query to render in all three formalisms came down to choosing one that stays within selection / projection / join / rename, which is a constraint the lectures state but don't exercise at realistic sizes.
+### 6.1 Why we prove BCNF (not just 3NF)
 
-## 12. Conclusions  *[shared]*
+BCNF is strictly stronger than 3NF: a relation in BCNF is automatically in 3NF, but not vice versa. A relation is in BCNF iff every non-trivial FD `X → Y` has `X` as a superkey. Because every FD in HarmonyVault's minimal cover has a candidate key on the left-hand side, all nine relations are in BCNF.
 
-Short section summarizing what works, the scale achieved, and what we would do differently with more time: full-text search on `Clips.title`, audio-similarity indexing via perceptual hashes, a proper web UI (the Flask prototype in [legacy_python/web/](../legacy_python/web/) is an archived starting point), cloud deployment with a managed MySQL instance.
+### 6.2 Corrected intermediate relationship schemas (per TA feedback)
+
+The proposal's relationship schemas were incorrect because the primary key of a relationship schema is determined by cardinality, not by naively listing both entity keys.
+
+| Relationship | Cardinality | Incorrect proposal form | Corrected form |
+| --- | --- | --- | --- |
+| `Has` (Users — Clips) | many-to-one (clips → user) | `Has(userID, clipID)` PK = {userID, clipID} | `Has(`**`clipID`**`, userID)` PK = {clipID} |
+| `Create` (Users — Projects) | many-to-one (projects → user) | `Create(userID, projectID)` PK = {userID, projectID} | `Create(`**`projectID`**`, userID)` PK = {projectID} |
+| `To` (Clips — MusicalAttributes) | one-to-one | `To(clipID, attributeID)` PK = {clipID, attributeID} | `To(`**`clipID`**`, attributeID)` PK = {clipID} |
+
+### 6.3 Collapsing corrected relationship schemas into entity tables
+
+Each corrected relationship schema shares its PK with one of its connected entities, so it can be merged into that entity without information loss:
+
+1. `Has(clipID, userID)` with PK {clipID} has the same PK as `Clips`. Adding `userID` as a non-key FK in `Clips` absorbs the relation entirely → `Clips.userID`.
+2. `Create(projectID, userID)` with PK {projectID} → folded into `Projects.ownerUserID`.
+3. `To(clipID, …)` with PK {clipID} → folded into `MusicalAttributes` with `clipID` as both PK and FK.
+
+The two relations absent from the proposal were also added: `ProjectCollaborators` (M-N with `role`) for the collaboration use case, and `ClipVersions` (weak entity of `Clips`) for version history.
+
+### 6.4 BCNF proof summary
+
+For each of the nine relations, every non-trivial FD in its minimal cover has a candidate key on the LHS:
+
+| Relation | All non-trivial FD LHS sets | All LHS sets are superkeys? |
+| --- | --- | --- |
+| Users | {userID}, {username}, {email} | Yes (all three are candidate keys) |
+| Clips | {clipID} | Yes |
+| MusicalAttributes | {clipID} | Yes |
+| Projects | {projectID}, {ownerUserID, name} | Yes (both are candidate keys) |
+| Tags | {tagID}, {userID, tagName} | Yes |
+| ClipTags | — (no non-trivial FDs; all-key) | Vacuously yes |
+| ProjectClips | — (all-key) | Vacuously yes |
+| ProjectCollaborators | {projectID, userID} | Yes |
+| ClipVersions | {versionID}, {clipID, versionNumber} | Yes |
+
+Full proofs with attribute-by-attribute FD listings are in `docs/normalization.md`.
+
+### 6.5 Lossless join and dependency preservation
+
+Because the schema was **designed** rather than obtained by decomposing a larger relation, lossless join is guaranteed: every pair of relations shares an FK attribute set that is a superkey of at least one side. Dependency preservation is trivially satisfied because every FD is enforced inside the relation that contains it; no FD was split across relations.
+
+---
+
+## 7. Example Queries
+
+*(Section owner: Jacob Liebson. Provide screenshots of Java CLI output and the full query table below.)*
+
+### 7.1 Query catalog
+
+| ID | Difficulty | English description |
+| --- | --- | --- |
+| E1 | Easy | List every registered user in signup order |
+| E2 | Easy | Count how many clips each user owns |
+| E3 | Easy | Find all clips with tempo between 90 and 120 BPM |
+| M1 | Medium | Show C-minor clips in 90–120 BPM range owned by a specific user |
+| M2 | Medium | Which projects have clips from multiple distinct owners? |
+| M3 | Medium | Which users have an average clip tempo above the overall average? |
+| H1 | Hard | Orphaned clips — clips not in any project (NOT EXISTS) |
+| H2 | Hard | Users who have tagged every clip they own (universal quantifier) |
+| H3 | Hard | Most recent version of every clip with its musical attributes |
+| A1 | Admin | Top-20 most popular tag names across all users |
+| A2 | Admin | Per-user stats: clips owned, projects owned, collaborations |
+| A3 | Admin | Tempo histogram across the entire catalog (20-BPM buckets) |
+
+The admin queries (A1–A3) cover the cross-user / administrative use cases U9–U11 added per TA feedback. SQL for all twelve queries lives in `queries/`.
+
+### 7.2 Query E3 in SQL, Relational Algebra, and TRC
+
+**SQL**
+```sql
+SELECT c.clipID, c.title, ma.musicalKey, ma.mode, ma.tempo
+FROM Clips c
+JOIN MusicalAttributes ma ON ma.clipID = c.clipID
+WHERE ma.tempo BETWEEN 90 AND 120;
+```
+
+**Relational Algebra**
+```
+π_{clipID, title, musicalKey, mode, tempo} (
+    σ_{tempo ≥ 90 ∧ tempo ≤ 120} (
+        Clips ⋈ MusicalAttributes
+    )
+)
+```
+
+**Tuple Relational Calculus**
+```
+{ t.clipID, t.title, a.musicalKey, a.mode, a.tempo |
+    ∃ c ∈ Clips ( c.clipID = t.clipID ∧ c.title = t.title ) ∧
+    ∃ a ∈ MusicalAttributes ( a.clipID = t.clipID ∧
+                              a.tempo ≥ 90 ∧ a.tempo ≤ 120 )
+}
+```
+
+E3 is chosen because it stays within selection / projection / join — no aggregation — and therefore has exact equivalents in both basic RA and basic TRC. Queries M3 (aggregate comparison) and H3 (argmax per group) require the extended RA `γ` operator and have no TRC expression without aggregate extensions; those limitations are noted in `queries/ra_trc.md`.
+
+---
+
+## 8. Implementation
+
+*(Section owner: Sky Zhou for data volumes; Jacob Liebson for Java CLI. Fill in final row counts and wall-clock timings after the generator runs.)*
+
+- **DBMS**: MySQL 8.x (InnoDB, utf8mb4).
+- **Data generation**: Python 3.11 with pandas and Faker; `scripts/setup_db.py` orchestrates two generators that emit nine CSV files to `data/csv/`.
+- **Data source**: Kaggle "Ultimate Spotify Tracks" dataset (≈ 232,000 rows) → `Clips` + `MusicalAttributes`. All other rows are Faker-generated.
+- **CLI**: Java, `mysql-connector-j` with `allowLoadLocalInfile=true`; ingests CSVs via `LOAD DATA LOCAL INFILE` wrapped in `SET FOREIGN_KEY_CHECKS = 0 … 1` to avoid per-row FK validation overhead.
+- **Target volumes**: ≥ 10,000 clips, ≥ 500 users, ≥ 80 projects, realistic collaborator / tag / version density.
+- **Interchange contract**: nine CSVs, FK-safe load order, column order defined in `docs/csv_format.md`.
+
+---
+
+## 9. Integrity Constraints in Practice
+
+### 9.1 The four trigger-enforced rules
+
+MySQL `CHECK` constraints evaluate a single row in isolation; they cannot access other tables. The following four semantic rules each span multiple tables and therefore require triggers:
+
+1. **Owner as collaborator.** `trg_projects_after_insert_owner_collab` (AFTER INSERT on Projects) automatically inserts the new project's `ownerUserID` into `ProjectCollaborators` with `role='owner'`. Without this trigger, a "list all collaborators" query would silently omit the owner.
+
+2. **Project-clip access control.** `trg_project_clips_before_insert_access` (BEFORE INSERT on ProjectClips) looks up the clip's owner and checks whether that user is either the project owner or an existing collaborator. If neither, it raises `SQLSTATE 45000`. This enforces use case U7 — the rule that a clip can only be added to a project by a user with access to that project.
+
+3. **Sequential version numbers.** `trg_clip_versions_before_insert_seq` (BEFORE INSERT on ClipVersions) computes `MAX(versionNumber) + 1` for the given `clipID` and assigns it automatically when the caller passes `NULL` or `0`. A caller-supplied value that skips the sequence is rejected. This prevents gaps in version history that would confuse references like "version 3 of clip X."
+
+4. **Immutable version numbers.** `trg_clip_versions_before_update_immutable_number` (BEFORE UPDATE on ClipVersions) rejects any attempt to change `versionNumber` after it is set. Historical references remain stable even after other columns of the version row are updated.
+
+### 9.2 Application-layer constraints
+
+The following rules are cheaper or impossible to enforce at the DBMS level and are therefore validated in the Java CLI before a statement is issued:
+
+- **Email format** — the SQL `CHECK` accepts anything with `@` and `.`; the application applies a stricter regex.
+- **Path sanitization** — `Clips.filepath` and `ClipVersions.filepath` are rejected if they contain `..` traversal sequences.
+- **Role-based write permission** — a `viewer` collaborator is blocked from inserting into `ProjectClips`. The DBMS does not know who the current user is; the application holds the authenticated session.
+- **Tag normalisation** — tag names are lowercased and trimmed before insertion so `"Jazz "` and `"jazz"` map to the same row.
+
+### 9.3 Enforcement-layer tradeoffs
+
+| Layer | When to use | Example |
+| --- | --- | --- |
+| `CHECK` | Single-row domain rule; no cross-table lookup needed | `mode IN ('major','minor')` |
+| Trigger | Cross-table semantic rule; must fire even on bulk loads | Project-clip access control (U7) |
+| Application | Rule requires session context the DBMS lacks | Role-based write permission (U8) |
+
+The key insight is that triggers fire even when data arrives via `LOAD DATA INFILE` in Jacob's Java CLI, whereas application-layer checks do not. For the access-control rule (trigger 2) this is critical — bulk-loaded `ProjectClips` rows must also be validated.
+
+---
+
+## 10. Per-Member Contributions
+
+### Alfred Chen (qxc225) — Schema + data-contract track
+
+Alfred owns the relational design and its documentation, all of which can be completed without waiting on teammates' code:
+
+- **ER diagram** — nine entities/relationships in `docs/ER_diagram.drawio` / `docs/ER_diagram.png`, corrected per TA feedback (no FK attributes inside entity boxes; `role` and `addedAt` on the `Collaborates` diamond; weak entities with double borders; `versionNumber` shown as partial key). Regeneratable via `scripts/generate_er_diagram.py`.
+- **Relational schema** — nine tables, every relation in BCNF (stronger than 3NF), in `schema/01_create_tables.sql`.
+- **Triggers and indexes** — `schema/03_triggers.sql` (four triggers), `schema/04_indexes.sql` (eight non-PK indexes).
+- **Functional-dependency derivation** — minimal cover for every relation, all candidate keys identified, in `docs/functional_dependencies.md`.
+- **BCNF proof** — with corrected intermediate relationship schemas, the fold into entity tables, and lossless-join argument, in `docs/normalization.md`.
+- **Integrity-constraint catalog** — all PKs, FKs, CHECKs, UNIQUEs, trigger rules, and application-layer validations, in `docs/integrity_constraints.md`.
+- **CSV interchange specification** — column order, null marker, load order, golden samples — `docs/csv_format.md`. This is the contract that unblocks Sky's generator and Jacob's loader.
+- **Repository coordination** — post-pivot cleanup, `README.md`, `AGENTS.md`, and test suite.
+
+### Sky Zhou (sxz903) — Data track
+
+Sky owns all data generation; deliverables are independent of Jacob's Java code:
+
+- `scripts/load_spotify.py` — parses the Kaggle Spotify CSV and emits `data/csv/clips.csv` and `data/csv/musical_attributes.csv`, translating integer key codes to pitch-class strings.
+- `scripts/generate_synthetic.py` — Faker-driven generator that emits the remaining seven CSVs (≥ 500 users, ≥ 80 projects, realistic tag / collaborator / version density).
+- `scripts/setup_db.py` — orchestrator that runs both generators in order.
+- Golden-sample CSVs in `data/csv_sample/` (≤ 10 rows per file) for Jacob's early loader testing.
+
+### Jacob Liebson (jel212) — Application track (Java, separate repository)
+
+Jacob owns the Java CLI and canonical SQL; deliverables depend only on Sky's CSVs:
+
+- Java command-line interface with subcommands for clips, projects, tags, search, and admin queries.
+- `LOAD DATA LOCAL INFILE` ingestion of the nine CSVs in FK-safe order, wrapped in `SET FOREIGN_KEY_CHECKS = 0 … 1`.
+- `queries/easy.sql`, `queries/medium.sql`, `queries/hard.sql`, `queries/admin.sql` — twelve canonical queries.
+- `queries/ra_trc.md` — RA and TRC equivalents for selected queries.
+- Stored procedures and query-performance notes justifying `schema/04_indexes.sql`.
+
+---
+
+## 11. What We Learned
+
+**Alfred Chen:** Semantic constraints that cross tables — in particular the project-clip access-control rule — cannot be expressed as `CHECK` constraints because MySQL evaluates CHECKs on a single row with no access to other tables. Implementing the rule as a trigger raised a secondary question the lectures did not cover: what happens when the trigger fires during a cascade delete? Tracing through the cascade order forced a clear split between what belongs in the schema (domain constraints), what belongs in a trigger (cross-table invariants that must hold even on bulk loads), and what belongs at the application layer (rules that need session context such as the authenticated user's role).
+
+**Sky Zhou:** Real-world data ingestion is dirtier than the course datasets. The Kaggle Spotify CSV mixes integer key codes (0–11) with string mode values (`"major"`/`"minor"`) that sometimes arrive as booleans (0/1) depending on the file version; normalizing both into our `CHECK` domains required more translation code than expected. Faker's `unique` decorators also deplete quickly at 500-user scale, surfacing the difference between uniqueness enforcement in-memory versus at the DBMS level.
+
+**Jacob Liebson:** Rendering the same information need in SQL, relational algebra, and tuple relational calculus is not mechanical. Some SQL features — `GROUP BY`, `ORDER BY`, aggregate subqueries — have no analogue in classical RA or TRC, and the decision of which query to present in all three formalisms came down to finding one that stays within selection / projection / join / rename. That constraint, which the lectures state but do not exercise at realistic data sizes, turns out to be a meaningful design consideration when choosing which queries to expose in a CLI.
+
+---
+
+## 12. Conclusions
+
+HarmonyVault demonstrates that a small relational schema (nine tables) with carefully designed constraints, triggers, and indexes can support the full lifecycle of musical ideas: capture, tagging, project assembly, versioning, collaboration, and cross-catalog analytics. The Kaggle Spotify seed data (≈ 232,000 rows) and Faker-generated synthetic rows scale the system to a realistic workload; indexed retrieval on `(musicalKey, tempo)` keeps the most common query pattern sub-millisecond.
+
+Three things we would do differently with more time: (1) add full-text search on `Clips.title` so free-text queries work alongside the structured musical-attribute filters; (2) implement audio-similarity indexing via perceptual hashes stored as an additional column of `MusicalAttributes`; (3) finish and deploy the Flask web UI archived in `legacy_python/web/`, which would replace the Java CLI's text output with a browser-based tag editor and project timeline view.
 
 ---
 
 ## Appendix 1 — Installation Manual
 
-Expanded version of [README.md](../README.md) with hand-holding for the TA. Covers the Docker-MySQL option, the Kaggle CSV download step, the Python `venv` creation, and the two-repo handoff (Alfred/Sky produce CSVs here → Jacob's Java CLI consumes them in its own repo).
+### Prerequisites
+
+- Python 3.11 or newer (data-generation scripts only)
+- MySQL 8.x reachable over TCP. Quickest option:
+  ```bash
+  docker run -d --name hv-mysql \
+    -e MYSQL_ROOT_PASSWORD=dev \
+    -p 3306:3306 mysql:8
+  ```
+- Kaggle "Ultimate Spotify Tracks" CSV placed at `data/SpotifyFeatures.csv`
+  (download from the Kaggle dataset page for "Ultimate Spotify Tracks DB").
+
+### Setup
+
+```bash
+# 1. Clone this repository
+git clone <repo-url>
+cd HarmonyVault
+
+# 2. Create and activate Python virtual environment
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# 3. Copy and edit database credentials
+cp .env.example .env             # set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
+
+# 4. Load the schema into MySQL
+mysql -u root -pdev < schema/01_create_tables.sql
+mysql -u root -pdev < schema/02_constraints.sql
+mysql -u root -pdev < schema/03_triggers.sql
+mysql -u root -pdev < schema/04_indexes.sql
+
+# 5. Generate and load data
+python scripts/setup_db.py       # emits nine CSVs to data/csv/
+
+# 6. Hand the CSV folder to Jacob's Java CLI (separate repo)
+#    Jacob runs: java -jar harmonyvault-cli.jar load data/csv/
+
+# 7. Run the Python-side smoke tests
+pytest
+```
+
+### Regenerating the ER diagram
+
+```bash
+source .venv/bin/activate
+python scripts/generate_er_diagram.py   # overwrites docs/ER_diagram.png
+```
+
+---
 
 ## Appendix 2 — User Manual
 
-Walk-through screenshots of Jacob's Java CLI:
+*(Screenshots to be provided by Jacob after Java CLI is complete.)*
 
-1. Java CLI equivalent of `clips search --key C --mode minor --tempo-min 90 --tempo-max 120`.
-2. Java CLI equivalent of `projects create --name "Album Draft" --user alfred`.
-3. Java CLI's bulk-load command that ingests the nine CSV files in the FK-safe order.
+The Java CLI exposes five command groups: `clips`, `projects`, `tags`, `search`, and `admin`.
+
+Representative commands:
+
+```bash
+# Search clips
+java -jar hv.jar clips search --key C --mode minor --tempo-min 90 --tempo-max 120
+
+# Create a project
+java -jar hv.jar projects create --name "Album Draft" --user alfred
+
+# Add a collaborator
+java -jar hv.jar projects add-collaborator --project 1 --user sky --role editor
+
+# Run an admin query
+java -jar hv.jar admin top-tags --limit 20
+
+# Bulk-load all nine CSVs (FK-safe order, FK checks disabled during load)
+java -jar hv.jar load data/csv/
+```
+
+---
 
 ## Appendix 3 — Programmer Manual
 
-- **Module map** (this repo): [schema/](../schema/), [scripts/](../scripts/), [queries/](../queries/), [docs/](../docs/), [tests/](../tests/).
-- **CSV interchange contract**: summarize [docs/csv_format.md](../docs/csv_format.md) — column order, null marker `\N`, line terminator `\n`, explicit AUTO_INCREMENT IDs, FK-safe load order.
-- **Conventions**: every SQL file lives in [queries/](../queries/); every schema change updates [schema/01_create_tables.sql](../schema/01_create_tables.sql), the ER diagram, [docs/normalization.md](../docs/normalization.md), and (if column order changes) [docs/csv_format.md](../docs/csv_format.md) in the same commit.
-- **Testing**: `pytest` runs the schema-presence check and the nine SQL smoke tests; the Java CLI has its own test suite in Jacob's repository.
+### Module map (this repository)
+
+| Path | Purpose |
+| --- | --- |
+| `schema/` | DDL: `CREATE TABLE`, constraints, triggers, indexes |
+| `docs/` | ER diagram, FD derivation, BCNF proof, constraint catalog, CSV spec, work division |
+| `scripts/` | Data ingest (`load_spotify.py`), synthetic generation (`generate_synthetic.py`), orchestrator (`setup_db.py`), ER diagram generator (`generate_er_diagram.py`) |
+| `queries/` | Canonical SQL (easy / medium / hard / admin) and RA/TRC equivalents |
+| `tests/` | pytest: schema-structure smoke tests and query-execution smoke tests |
+| `report/` | This document and screenshot assets |
+| `legacy_python/` | Archived Python CLI and Flask web UI (pre-pivot) |
+
+### CSV interchange contract
+
+Nine files, one per table, in `data/csv/`. Load order is FK-safe (parents before children): `users.csv` → `tags.csv` → `clips.csv` → `musical_attributes.csv` → `projects.csv` → `clip_tags.csv` → `project_clips.csv` → `project_collaborators.csv` → `clip_versions.csv`. Null marker is `\N`; header row is always row 1 (`IGNORE 1 LINES`). Full spec in `docs/csv_format.md`.
+
+### Conventions
+
+- Every SQL query lives in `queries/`; never inline SQL in Python or Java.
+- Every schema change must update `schema/01_create_tables.sql`, `docs/ER_diagram.drawio`, `docs/normalization.md`, and (if column order changes) `docs/csv_format.md` in the same commit.
+- `pytest` covers schema structure, column presence, trigger existence, and query execution; run before every push.
