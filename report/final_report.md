@@ -205,7 +205,7 @@ Because the schema was **designed** rather than obtained by decomposing a larger
 
 ## 7. Example Queries
 
-*(Section owner: Jacob Liebson. Provide screenshots of Java CLI output and the full query table below.)*
+*Java CLI output screenshots will be added after Jacob's CLI is finalized (pending). The SQL, RA, and TRC expressions below are complete and can be run against the schema independently.*
 
 ### 7.1 Query catalog
 
@@ -260,14 +260,14 @@ E3 is chosen because it stays within selection / projection / join — no aggreg
 
 ## 8. Implementation
 
-*(Section owner: Sky Zhou for data volumes; Jacob Liebson for Java CLI. Fill in final row counts and wall-clock timings after the generator runs.)*
-
 - **DBMS**: MySQL 8.x (InnoDB, utf8mb4).
 - **Data generation**: Python 3.11 with pandas and Faker; `scripts/setup_db.py` orchestrates two generators that emit nine CSV files to `data/csv/`.
 - **Data source**: Kaggle "Ultimate Spotify Tracks" dataset (≈ 232,000 rows) → `Clips` + `MusicalAttributes`. All other rows are Faker-generated.
 - **CLI**: Java, `mysql-connector-j` with `allowLoadLocalInfile=true`; ingests CSVs via `LOAD DATA LOCAL INFILE` wrapped in `SET FOREIGN_KEY_CHECKS = 0 … 1` to avoid per-row FK validation overhead.
-- **Target volumes**: ≥ 10,000 clips, ≥ 500 users, ≥ 80 projects, realistic collaborator / tag / version density.
+- **Target volumes**: ≥ 10,000 clips (Spotify), ≥ 500 users, ≥ 80 projects, realistic collaborator / tag / version density.
 - **Interchange contract**: nine CSVs, FK-safe load order, column order defined in `docs/csv_format.md`.
+
+**Final row counts and Java CLI load timings** will be recorded here after the full Spotify dataset is loaded and Jacob's CLI run is complete.
 
 ---
 
@@ -416,7 +416,7 @@ python scripts/generate_er_diagram.py   # overwrites docs/ER_diagram.png
 
 ## Appendix 2 — User Manual
 
-*(Screenshots to be provided by Jacob after Java CLI is complete.)*
+*Screenshots pending Jacob's Java CLI completion.*
 
 The Java CLI exposes five command groups: `clips`, `projects`, `tags`, `search`, and `admin`.
 
