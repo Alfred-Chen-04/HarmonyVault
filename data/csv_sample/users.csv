@@ -1,0 +1,4 @@
+userID,username,email,dateCreated
+2,alice_sound,alice@example.com,2026-01-01 10:00:00
+3,bob_beats,bob@example.com,2026-01-02 11:00:00
+4,carol_mix,carol@example.com,2026-01-03 12:00:00
