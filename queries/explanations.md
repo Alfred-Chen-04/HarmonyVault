@@ -26,6 +26,14 @@ Every query in `easy.sql`, `medium.sql`, `hard.sql`, paired with the real-world 
 | H2 | "Which users have tagged every clip they own?" (universal quantifier) | hard.sql |
 | H3 | "For every clip, give me its most recent version together with its musical attributes and owner." | hard.sql |
 
+## Stored Procedures
+
+| Name | What it does | SQL file |
+| --- | --- | --- |
+| `add_clip_with_tags` | Insert a clip + musical attributes + tags atomically in one transaction. Creates missing tags automatically. | stored_procedures.sql |
+| `add_clip_version` | Append the next version of an existing clip; version number assigned by trigger. | stored_procedures.sql |
+| `add_collaborator` | Grant or update a user's role on a project (INSERT … ON DUPLICATE KEY UPDATE). | stored_procedures.sql |
+
 ## Admin (cross-user, added for TA feedback item 1)
 
 | ID | English | Invoked via |
