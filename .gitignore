@@ -8,3 +8,6 @@ data/*.zip
 .pytest_cache/
 .DS_Store
 report/assets/*.pdf.bak
+cli_java/lib/*.jar
+cli_java/out/
+cli_java/db.properties

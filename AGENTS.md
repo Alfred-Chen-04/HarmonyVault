@@ -9,7 +9,7 @@ HarmonyVault is the CSDS 341 (Spring 2026) final project for a team of three: Ja
 The deliverable is split across two repositories after the 2026-04-17 pivot:
 
 - **This repo** owns the MySQL schema, the data-generation scripts (which now emit one CSV per table), the canonical SQL queries, the ER / FD / normalization documents, and the written report.
-- **Jacob's separate Java repository** owns the command-line interface. The Java CLI reads the CSVs produced here and ingests them via `LOAD DATA LOCAL INFILE`.
+- **`cli_java/`** (this repository) owns the command-line interface. The Java CLI reads the CSVs produced here and ingests them via `LOAD DATA LOCAL INFILE`.
 
 The submission is due on Canvas on 2026-05-01. The TA demo is on 2026-04-22 at 11:00 AM.
 
@@ -19,7 +19,7 @@ The submission is due on Canvas on 2026-05-01. The TA demo is on 2026-04-22 at 1
 - Data-generation language: Python 3.11+
 - Data tools: pandas (Spotify CSV ingest), Faker (synthetic data)
 - CSV output format: UTF-8, `\N` as the NULL marker, RFC 4180 quoting — see [docs/csv_format.md](docs/csv_format.md)
-- CLI language: Java (lives in Jacob's separate repository; uses `mysql-connector-j` with `allowLoadLocalInfile=true`)
+- CLI language: Java (`cli_java/` in this repository; uses `mysql-connector-j` with `allowLoadLocalInfile=true`)
 - Test framework: pytest (schema + query smoke tests only)
 - OS targets: macOS and Linux
 
@@ -39,7 +39,8 @@ The Java CLI (separate repo) loads those CSVs into its own MySQL instance.
 
 - Regenerate the CSV dataset: `python scripts/setup_db.py`
 - Tests: `pytest`
-- Jacob's Java CLI: see Jacob's repository README.
+- Java CLI: `bash cli_java/build.sh` then `java -cp "cli_java/out:cli_java/lib/mysql-connector-j-*.jar" HarmonyVaultCLI`
+- Load CSV data: `java -cp "cli_java/out:cli_java/lib/mysql-connector-j-*.jar" DataLoader`
 
 ## 5. Directory map
 
@@ -50,6 +51,7 @@ The Java CLI (separate repo) loads those CSVs into its own MySQL instance.
 | [schema/](schema/) | Alfred | DDL: `CREATE TABLE`, triggers, indexes |
 | [docs/](docs/) | Alfred | ER diagram, FDs, normalization proof, integrity constraints, CSV interchange spec, work-division spec |
 | [scripts/](scripts/) | Sky | CSV generation (Spotify + Faker) |
+| [cli_java/](cli_java/) | Jacob | Java CLI source, DataLoader, SqlLoader, build script |
 | [queries/](queries/) | Jacob | Canonical SQL for every example query, plus RA/TRC equivalents |
 | [data/csv/](data/) | Sky | Generated CSVs (gitignored) |
 | `data/csv_sample/` | Sky | Tiny FK-consistent sample CSVs for Jacob to develop against |
